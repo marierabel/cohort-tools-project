@@ -2,12 +2,10 @@ const express = require("express");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const PORT = 5005;
-const cohorts = require("./cohorts.json");
-const students = require("./students.json");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const student = require("../Models/Student");
-const cohort = require("../Models/Cohort");
+const Student = require("./Models/Student.js");
+const Cohort = require("./Models/Cohort.js");
 const serverErrorMsg = { message: "Internal Server Error" };
 
 mongoose
@@ -40,14 +38,14 @@ app.get("/docs", (req, res) => {
 });
 
 app.get("/api/cohorts", (req, res) => {
-  res.json(cohorts);
+  res.json(Cohort);
 });
 
 app.get("/api/students", (req, res) => {
-  res.json(students);
+  res.json(Student);
 });
 
-app.post("/api/cohorts", async (req, res) => {
+app.post("/api/cohort", async (req, res) => {
   const {
     cohortSlug,
     cohortName,
@@ -61,7 +59,7 @@ app.post("/api/cohorts", async (req, res) => {
     totalHours,
   } = req.body;
   try {
-    const cohort = new cohort({
+    const cohort = await Cohort.create({
       cohortSlug,
       cohortName,
       program,
@@ -81,7 +79,7 @@ app.post("/api/cohorts", async (req, res) => {
 
 app.get("/api/cohorts", async (req, res) => {
   try {
-    const cohort = await cohorts.find({});
+    const cohort = await Cohort.find({});
     res.send(cohort);
   } catch (error) {
     res.status(500).json(serverErrorMsg);
@@ -90,7 +88,8 @@ app.get("/api/cohorts", async (req, res) => {
 app.get("/api/cohorts/:cohortId", async (req, res) => {
   const { cohortId } = req.params;
   try {
-    const cohort = await cohorts.find({ cohortId });
+    const cohort = await Cohort.find({ cohortId });
+    res.json(cohort);
   } catch (error) {
     res.status(500).json(serverErrorMsg);
   }
@@ -112,8 +111,8 @@ app.put("/api/cohorts/:cohortId", async (req, res) => {
   } = req.body;
 
   try {
-    const cohort = await cohort.findByIdAndUpdate(
-      id,
+    const cohort = await Cohort.findByIdAndUpdate(
+      cohortId,
       {
         cohortSlug,
         cohortName,
@@ -149,7 +148,7 @@ app.delete("/api/cohorts/:cohortId", async (req, res) => {
 
 app.post("/api/students", async (req, res) => {
   try {
-    const newStudent = await student.create({
+    const newStudent = await Student.create({
       firstName: req.body.firstName,
       lastName: req.body.lastName,
       email: req.body.email,
@@ -169,7 +168,7 @@ app.post("/api/students", async (req, res) => {
 
 app.get("/api/students", async (req, res) => {
   try {
-    const allStudents = await student.find();
+    const allStudents = await Student.find().populate("cohort");
     res.status(200).json(allStudents);
   } catch (err) {
     res.status(500).json(serverErrorMsg);
@@ -185,7 +184,9 @@ app.get("/api/students/cohort/:cohortId", async (req, res) => {
   }
 
   try {
-    const students = await student.find({ cohort: cohortId });
+    const students = await Student.find({ cohort: cohortId }).populate(
+      "cohort"
+    );
     res.status(200).json(students);
   } catch (err) {
     res.status(500).json(serverErrorMsg);
@@ -202,7 +203,7 @@ app.get("/api/students/:studentId", async (req, res) => {
   }
 
   try {
-    const student = await student.find(studentId);
+    const student = await Student.find(studentId).populate("cohort");
     res.status(200).json(student);
   } catch (err) {
     res.status(500).json(serverErrorMsg);
