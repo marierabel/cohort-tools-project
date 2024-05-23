@@ -6,7 +6,9 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const Student = require("./Models/Student.js");
 const Cohort = require("./Models/Cohort.js");
+const { handleNotFound } = require("./utils.js");
 const serverErrorMsg = { message: "Internal Server Error" };
+
 
 mongoose
   .connect("mongodb://127.0.0.1:27017/cohort-tools-api")
@@ -30,6 +32,8 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(cors({ origin: `http://127.0.0.1:5173` }));
 
+
+
 // ROUTES - https://expressjs.com/en/starter/basic-routing.html
 // Devs Team - Start working on the routes here:
 // ...
@@ -37,15 +41,7 @@ app.get("/docs", (req, res) => {
   res.sendFile(__dirname + "/views/docs.html");
 });
 
-app.get("/api/cohorts", (req, res) => {
-  res.json(Cohort);
-});
-
-app.get("/api/students", (req, res) => {
-  res.json(Student);
-});
-
-app.post("/api/cohort", async (req, res) => {
+app.post("/api/cohort", async (req, res, next) => {
   const {
     cohortSlug,
     cohortName,
@@ -73,29 +69,41 @@ app.post("/api/cohort", async (req, res) => {
     });
     res.send(cohort);
   } catch (error) {
-    res.status(500).json(serverErrorMsg);
+    next(error);
   }
 });
 
-app.get("/api/cohorts", async (req, res) => {
+app.get("/api/cohorts", async (req, res, next) => {
   try {
     const cohort = await Cohort.find({});
     res.send(cohort);
   } catch (error) {
-    res.status(500).json(serverErrorMsg);
+    next(error);
   }
 });
-app.get("/api/cohorts/:cohortId", async (req, res) => {
+
+app.all(["/api/cohorts/:cohortId", "/api/students/cohort/:cohortId"], (req, res, next) => {
+  const { cohortId } = req.params;
+
+  if (!mongoose.isValidObjectId(cohortId)) {
+    handleNotFound(res);
+    return;
+  
+  }
+  next()
+});
+
+app.get("/api/cohorts/:cohortId", async (req, res, next) => {
   const { cohortId } = req.params;
   try {
     const cohort = await Cohort.find({ cohortId });
     res.json(cohort);
   } catch (error) {
-    res.status(500).json(serverErrorMsg);
+    next(error);
   }
 });
 
-app.put("/api/cohorts/:cohortId", async (req, res) => {
+app.put("/api/cohorts/:cohortId", async (req, res, next) => {
   const { cohortId } = req.params;
   const {
     cohortSlug,
@@ -129,24 +137,24 @@ app.put("/api/cohorts/:cohortId", async (req, res) => {
     );
     res.send(cohort);
   } catch (error) {
-    res.status(500).send(error);
+    next(error);
   }
 });
 
-app.delete("/api/cohorts/:cohortId", async (req, res) => {
+app.delete("/api/cohorts/:cohortId", async (req, res, next) => {
   const { cohortId } = req.params;
   try {
-    await Cohort.findByIdDelete(cohortId);
-    await Student.findByIdDelete({ cohort: cohortId });
+    await Cohort.findByIdAndDelete(cohortId);
+    await Student.findByIdAndDelete({ cohort: cohortId });
     res.sendStatus(204);
   } catch (error) {
-    res.status(500).json(serverErrorMsg);
+    next(error);
   }
 });
 
 //===============================
 
-app.post("/api/students", async (req, res) => {
+app.post("/api/students", async (req, res, next) => {
   try {
     const newStudent = await Student.create({
       firstName: req.body.firstName,
@@ -161,17 +169,17 @@ app.post("/api/students", async (req, res) => {
       cohort: req.body.cohort,
     });
     res.status(201).json(newStudent);
-  } catch (err) {
-    res.status(500).json(serverErrorMsg);
+  } catch (error) {
+    next(error);
   }
 });
 
-app.get("/api/students", async (req, res) => {
+app.get("/api/students", async (req, res, next) => {
   try {
     const allStudents = await Student.find().populate("cohort");
     res.status(200).json(allStudents);
-  } catch (err) {
-    res.status(500).json(serverErrorMsg);
+  } catch (error) {
+    next(error);
   }
 });
 app.get("/api/students/cohort/:cohortId", async (req, res) => {
@@ -188,12 +196,12 @@ app.get("/api/students/cohort/:cohortId", async (req, res) => {
       "cohort"
     );
     res.status(200).json(students);
-  } catch (err) {
-    res.status(500).json(serverErrorMsg);
+  } catch (error) {
+    next(error);
   }
 });
 
-app.get("/api/students/:studentId", async (req, res) => {
+app.get("/api/students/:studentId", async (req, res, next) => {
   const { studentId } = req.params;
   const notFoundMsg = { message: `No such cohort with id: ${studentId}` };
 
@@ -205,12 +213,12 @@ app.get("/api/students/:studentId", async (req, res) => {
   try {
     const student = await Student.find(studentId).populate("cohort");
     res.status(200).json(student);
-  } catch (err) {
-    res.status(500).json(serverErrorMsg);
+  } catch (error) {
+    next(error);
   }
 });
 
-app.put("/api/students/:studentId", async (req, res) => {
+app.put("/api/students/:studentId", async (req, res, next) => {
   const { studentId } = req.params;
   const {
     firstName,
@@ -243,17 +251,17 @@ app.put("/api/students/:studentId", async (req, res) => {
     );
     res.status(200).json(updatedStudent);
   } catch (error) {
-    res.status(500).json(serverErrorMsg);
+    next(error);
   }
 });
 
-app.delete("/api/students/:studenttId", async (req, res) => {
+app.delete("/api/students/:studenttId", async (req, res, next) => {
   const { studentId } = req.params;
   try {
-    await Student.findByIdDelete(studentId);
+    await Student.findByIdAndDelete(studentId);
     res.sendStatus(204);
   } catch (error) {
-    res.status(500).json(serverErrorMsg);
+    next(error);
   }
 });
 
