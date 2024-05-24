@@ -14,7 +14,11 @@ router.post("/signup", async (req, res, next) => {
   const hashedPassword = await bcrypt.hash(password, salt);
 
   try {
-    const createdUser = await User.create({ email, password: hashedPassword });
+    const createdUser = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
 
     delete createdUser._doc.password;
 
@@ -25,7 +29,7 @@ router.post("/signup", async (req, res, next) => {
 });
 
 router.post("/login", async (req, res, next) => {
-  const { name, email, password } = req.body;
+  const { email, password } = req.body;
 
   try {
     const user = await User.findOne({ email });
@@ -34,11 +38,11 @@ router.post("/login", async (req, res, next) => {
       res.status(401).json({ message: "Invalid credentials" });
       return;
     }
-
+    console.log(TOKEN_SECRET);
     const authToken = jwt.sign({ email }, TOKEN_SECRET, {
       algorithm: "HS256",
       issuer: "WebDev804",
-      expiresIn: "7d",
+      expiresIn: "1d",
     });
 
     res.json({ authToken });
