@@ -7,7 +7,8 @@ const mongoose = require("mongoose");
 const Student = require("./Models/Student.js");
 const Cohort = require("./Models/Cohort.js");
 const { handleNotFound } = require("./utils.js");
-const serverErrorMsg = { message: "Internal Server Error" };
+// const serverErrorMsg = { message: "Internal Server Error" };
+const usersRouter = require ("./views/routes/auth.routes.js");
 
 
 mongoose
@@ -31,7 +32,7 @@ app.use(express.static("public"));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(cors({ origin: `http://127.0.0.1:5173` }));
-
+app.use("/users", usersRouter);
 
 
 // ROUTES - https://expressjs.com/en/starter/basic-routing.html
