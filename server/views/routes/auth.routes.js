@@ -6,7 +6,7 @@ const bcrypt = require("bcryptjs");
 const { TOKEN_SECRET } = require("../../consts");
 const User = require("../../Models/User");
 const protectionMiddleware = require("../../src/middlewares/protection.middleware");
-
+//========================================================
 router.post("/signup", async (req, res, next) => {
   const { name, email, password } = req.body;
 
